@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Activity, Key, Lock, Settings, Shield, Users } from "lucide-react";
 import { toast } from "sonner";
+import { BusinessScopePanel } from "@/components/admin/business-scope-panel";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -971,6 +972,7 @@ function SettingsPage() {
   };
   return (
     <AdminShell section="settings">
+      <BusinessScopePanel />
       <TaxTable
         rows={rows}
         searchKeys={(row) => `${row.setting_key} ${row.description || ""}`}

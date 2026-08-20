@@ -4,6 +4,7 @@ import {
   ChevronRight, BarChart3, Boxes,
 } from "lucide-react";
 import { InventoryProvider } from "@/components/inventory/inventory-provider";
+import { useScopedItems } from "@/components/scope-guard";
 
 export const Route = createFileRoute("/_authenticated/m/inventory")({ component: InventoryHub });
 
@@ -21,19 +22,19 @@ function InventoryHub() {
 }
 
 function InventoryOverview() {
-  const cards = [
+  const cards = useScopedItems([
     { label: "Products", icon: Package, to: "/m/inventory/products" },
     { label: "Stock", icon: Boxes, to: "/m/inventory/stock" },
     { label: "Suppliers", icon: Truck, to: "/m/inventory/suppliers" },
     { label: "Purchases", icon: ShoppingBag, to: "/m/inventory/purchases" },
-  ];
+  ]);
 
-  const moreItems = [
+  const moreItems = useScopedItems([
     { label: "Categories", icon: Tags, to: "/m/inventory/categories" },
     { label: "Stock Movement", icon: ArrowLeftRight, to: "/m/inventory/movements" },
     { label: "Transfers", icon: Truck, to: "/m/inventory/transfers" },
     { label: "Warehouses", icon: Warehouse, to: "/m/inventory/warehouses" },
-  ];
+  ]);
 
   return (
     <div className="mx-auto max-w-md md:max-w-6xl">

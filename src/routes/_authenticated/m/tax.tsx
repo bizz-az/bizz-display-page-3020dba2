@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { TaxModuleProvider, useTaxModule } from "@/components/tax-module-provider";
 import { TaxBottomNav } from "@/components/tax/tax-workspace";
+import { useScopedItems } from "@/components/scope-guard";
 
 export const Route = createFileRoute("/_authenticated/m/tax")({ component: TaxHub });
 
@@ -39,20 +40,20 @@ function TaxOverview() {
   const { obligations, metrics } = useTaxModule();
   const upcoming = obligations.filter((row) => row.status !== "Paid").slice(0, 3);
 
-  const cards = [
+  const cards = useScopedItems([
     { label: "EFD Sales", icon: ShoppingCart, to: "/m/tax/sales" },
     { label: "Purchases", icon: ShoppingBag, to: "/m/tax/purchases" },
     { label: "Expenses", icon: Receipt, to: "/m/tax/expenses" },
     { label: "Tax Calendar", icon: CalendarDays, to: "/m/tax/calendar" },
-  ];
+  ]);
 
-  const moreItems = [
+  const moreItems = useScopedItems([
     { label: "VAT", icon: Percent, to: "/m/tax/vat" },
     { label: "Income Tax", icon: Coins, to: "/m/tax/income" },
     { label: "Withholding Tax", icon: HandCoins, to: "/m/tax/withholding" },
     { label: "Capital Assets", icon: Building2, to: "/m/tax/assets" },
     { label: "Documents", icon: FolderArchive, to: "/m/tax/documents" },
-  ];
+  ]);
 
   return (
     <div className="mx-auto max-w-md px-5 pb-28 pt-6 text-white md:max-w-6xl md:px-10 md:pb-12 md:pt-10">

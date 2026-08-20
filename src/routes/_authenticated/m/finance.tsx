@@ -3,6 +3,7 @@ import {
   Wallet, Landmark, Receipt, CreditCard, ArrowLeftRight, BarChart3, ChevronRight, ScrollText,
 } from "lucide-react";
 import { FinanceProvider, useFinance, formatMoney } from "@/components/finance/finance-provider";
+import { useScopedItems } from "@/components/scope-guard";
 
 export const Route = createFileRoute("/_authenticated/m/finance")({ component: FinanceHub });
 
@@ -20,12 +21,12 @@ function FinanceHub() {
 function FinanceOverview() {
   const { metrics, accounts } = useFinance();
 
-  const cards = [
+  const cards = useScopedItems([
     { label: "Accounts", icon: Landmark, to: "/m/finance/accounts" },
     { label: "Expenses", icon: Receipt, to: "/m/finance/expenses" },
     { label: "Payments", icon: CreditCard, to: "/m/finance/payments" },
     { label: "Transfers", icon: ArrowLeftRight, to: "/m/finance/transfers" },
-  ] as const;
+  ]);
 
   return (
     <div className="relative -m-6 min-h-[calc(100vh-4rem)] overflow-hidden text-white">

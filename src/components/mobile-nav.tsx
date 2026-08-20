@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, Package, ScanLine, ShieldCheck, LayoutGrid } from "lucide-react";
 import { ScanCaptureDialog } from "@/components/scan-capture";
+import { useScopedItems } from "@/components/scope-guard";
 
 const ITEMS = [
   { to: "/dashboard", label: "Home", icon: Home },
@@ -9,12 +10,13 @@ const ITEMS = [
   { to: null, label: "Scan", icon: ScanLine, center: true },
   { to: "/m/compliance", label: "Comply", icon: ShieldCheck },
   { to: "/m/admin", label: "More", icon: LayoutGrid },
-] as const;
+];
 
 
 export function MobileNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [scanOpen, setScanOpen] = useState(false);
+  const items = useScopedItems(ITEMS);
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 lg:hidden">
@@ -23,7 +25,7 @@ export function MobileNav() {
           className="mx-auto flex max-w-md items-stretch justify-between gap-1 px-3 pt-2"
           style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
         >
-          {ITEMS.map((item) => {
+          {items.map((item) => {
             const active =
               !!item.to && (pathname === item.to || (item.to !== "/dashboard" && pathname.startsWith(item.to)));
             if (!item.to) {

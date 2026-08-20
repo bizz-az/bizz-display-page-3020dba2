@@ -4,6 +4,7 @@ import {
   ChevronRight, BarChart3,
 } from "lucide-react";
 import { SalesProvider } from "@/components/sales/sales-provider";
+import { useScopedItems } from "@/components/scope-guard";
 
 export const Route = createFileRoute("/_authenticated/m/sales")({ component: SalesHub });
 
@@ -21,19 +22,19 @@ function SalesHub() {
 }
 
 function SalesOverview() {
-  const cards = [
+  const cards = useScopedItems([
     { label: "New Sale", icon: ShoppingCart, to: "/m/sales/new" },
     { label: "Invoices", icon: Receipt, to: "/m/sales/invoices" },
     { label: "Quotations", icon: FileText, to: "/m/sales/quotations" },
     { label: "Payments", icon: Wallet, to: "/m/sales/payments" },
-  ];
+  ]);
 
-  const moreItems = [
+  const moreItems = useScopedItems([
     { label: "Sales Orders", icon: ClipboardList, to: "/m/sales/orders" },
     { label: "Sales History", icon: History, to: "/m/sales/history" },
     { label: "Returns", icon: RotateCcw, to: "/m/sales/returns" },
     { label: "Draft Orders", icon: FileText, to: "/m/sales/drafts" },
-  ];
+  ]);
 
   return (
     <div className="mx-auto max-w-md md:max-w-6xl">

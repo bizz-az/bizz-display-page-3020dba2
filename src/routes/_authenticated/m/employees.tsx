@@ -4,6 +4,7 @@ import {
   ChevronRight, FileBarChart, BarChart3, Award, ClipboardList,
 } from "lucide-react";
 import { HrProvider } from "@/components/hr/hr-provider";
+import { useScopedItems } from "@/components/scope-guard";
 
 export const Route = createFileRoute("/_authenticated/m/employees")({ component: EmployeesRoute });
 
@@ -21,20 +22,20 @@ function EmployeesRoute() {
 }
 
 function EmployeesHub() {
-  const cards = [
+  const cards = useScopedItems([
     { label: "Employees", icon: Users, to: "/m/employees/staff" },
     { label: "Departments", icon: Building2, to: "/m/employees/departments" },
     { label: "Attendance", icon: Clock, to: "/m/employees/attendance" },
     { label: "Payroll", icon: Banknote, to: "/m/employees/payroll" },
-  ];
+  ]);
 
-  const hrItems = [
+  const hrItems = useScopedItems([
     { label: "Recruitment", icon: UserPlus, to: "/m/employees/recruitment" },
     { label: "Leave Requests", icon: CalendarDays, to: "/m/employees/leave" },
     { label: "Performance", icon: Award, to: "/m/employees/performance" },
     { label: "Contracts", icon: ClipboardList, to: "/m/employees/contracts" },
     { label: "Payslips", icon: FileBarChart, to: "/m/employees/payslips" },
-  ];
+  ]);
 
   return (
     <div className="mx-auto max-w-md px-5 pb-28 pt-6 md:max-w-6xl md:px-10 md:pb-12 md:pt-10">

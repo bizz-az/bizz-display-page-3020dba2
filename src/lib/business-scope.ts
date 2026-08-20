@@ -21,35 +21,6 @@
 
 /* ============================ characteristics ============================= */
 
-/** Explicit operational characteristics a business can record about itself. */
-export type OperationalFlags = {
-  sells_products: boolean;
-  provides_services: boolean;
-  uses_inventory: boolean;
-  uses_pos: boolean;
-  accepts_credit: boolean;
-  has_suppliers: boolean;
-  has_customers: boolean;
-  has_employees: boolean;
-  runs_payroll: boolean;
-  multi_location: boolean;
-  needs_advanced_reporting: boolean;
-};
-
-export const OPERATIONAL_FLAG_LABELS: Record<keyof OperationalFlags, string> = {
-  sells_products: "Sells physical products",
-  provides_services: "Provides services",
-  uses_inventory: "Keeps stock / inventory",
-  uses_pos: "Sells over the counter (POS)",
-  accepts_credit: "Sells on credit",
-  has_suppliers: "Buys from suppliers",
-  has_customers: "Keeps customer records",
-  has_employees: "Has employees",
-  runs_payroll: "Runs payroll",
-  multi_location: "Operates several locations",
-  needs_advanced_reporting: "Needs advanced reporting",
-};
-
 /**
  * Everything the capability engine is allowed to reason about.
  * Derived values come from the existing business profile — they are not stored twice.
@@ -65,8 +36,6 @@ export type BusinessCharacteristics = {
   taxRegistrations: string[];
   doesImport: boolean;
   doesExport: boolean;
-  /** Explicit operational answers (business_settings). */
-  flags: Partial<OperationalFlags>;
   /**
    * True when the business has never recorded any scope configuration.
    * Legacy businesses keep the full application (backward compatible).
@@ -83,7 +52,6 @@ export const EMPTY_CHARACTERISTICS: BusinessCharacteristics = {
   taxRegistrations: [],
   doesImport: false,
   doesExport: false,
-  flags: {},
   unconfigured: true,
 };
 
@@ -124,14 +92,11 @@ type Rule = {
   evaluate: (c: BusinessCharacteristics) => boolean;
 };
 
-const flag = (c: BusinessCharacteristics, key: keyof OperationalFlags, fallback: boolean) =>
-  c.flags[key] ?? fallback;
-
 const hasRegistration = (c: BusinessCharacteristics, code: string) =>
   c.taxRegistrations.some((entry) => entry.trim().toLowerCase().startsWith(code.toLowerCase()));
 
 const employees = (c: BusinessCharacteristics) =>
-  flag(c, "has_employees", (c.employeeCount ?? 0) > 0);
+  (c.employeeCount ?? 0) > 0;
 
 /**
  * One central rule table. Adding a future characteristic or capability means
@@ -141,37 +106,37 @@ const CAPABILITY_RULES: Record<Capability, Rule> = {
   sales: { reason: "Every business sells something", evaluate: () => true },
   pos: {
     reason: "Counter selling",
-    evaluate: (c) => flag(c, "uses_pos", flag(c, "sells_products", true)),
+    evaluate: () => true,
   },
   credit_sales: { reason: "Selling on credit", evaluate: (c) => flag(c, "accepts_credit", true) },
-  products: { reason: "Sells physical products", evaluate: (c) => flag(c, "sells_products", true) },
+  products: { reason: "Sells physical products", evaluate: () => true },
   inventory: {
     reason: "Keeps stock",
-    evaluate: (c) => flag(c, "uses_inventory", flag(c, "sells_products", true)),
+    evaluate: () => true,
   },
   stock_transfers: {
     reason: "Stock moved between locations",
-    evaluate: (c) => flag(c, "uses_inventory", true) && flag(c, "multi_location", false),
+    evaluate: () => false,
   },
   multi_warehouse: {
     reason: "More than one location",
-    evaluate: (c) => flag(c, "multi_location", false),
+    evaluate: () => false,
   },
   purchasing: {
     reason: "Buys goods from suppliers",
-    evaluate: (c) => flag(c, "has_suppliers", flag(c, "sells_products", true)),
+    evaluate: () => true,
   },
-  suppliers: { reason: "Supplier records", evaluate: (c) => flag(c, "has_suppliers", true) },
-  customers: { reason: "Customer records", evaluate: (c) => flag(c, "has_customers", true) },
+  suppliers: { reason: "Supplier records", evaluate: () => true },
+  customers: { reason: "Customer records", evaluate: () => true },
   crm_marketing: {
     reason: "Customer relationship & marketing work",
-    evaluate: (c) => flag(c, "has_customers", true),
+    evaluate: () => true,
   },
   finance: { reason: "Money in and out", evaluate: () => true },
   expenses: { reason: "Business spending", evaluate: () => true },
   payroll: {
     reason: "Pays salaries",
-    evaluate: (c) => employees(c) && flag(c, "runs_payroll", true),
+    evaluate: (c) => employees(c),
   },
   employees: { reason: "Has staff", evaluate: (c) => employees(c) },
   tax: { reason: "Registered for at least one tax", evaluate: () => true },
@@ -182,7 +147,7 @@ const CAPABILITY_RULES: Record<Capability, Rule> = {
   },
   tax_assets: {
     reason: "Owns depreciable assets",
-    evaluate: (c) => c.legalForm !== "Sole Proprietor" || flag(c, "sells_products", true),
+    evaluate: (c) => c.legalForm !== "Sole Proprietor" || (c.employeeCount ?? 0) > 0,
   },
   tax_import_export: {
     reason: "Imports or exports goods",
@@ -192,7 +157,7 @@ const CAPABILITY_RULES: Record<Capability, Rule> = {
   reports: { reason: "Operational reporting", evaluate: () => true },
   advanced_analytics: {
     reason: "Advanced analytics requested",
-    evaluate: (c) => flag(c, "needs_advanced_reporting", true),
+    evaluate: () => true,
   },
   administration: { reason: "Business administration", evaluate: () => true },
 };
@@ -481,11 +446,6 @@ export const SCOPE_PRESETS: ScopePreset[] = [
       name: "Test Retail Co.", businessType: "Retail", legalForm: "Limited Company",
       sector: "General Trade", employeeCount: 12, taxRegistrations: ["TIN", "VAT", "PAYE"],
       doesImport: true, doesExport: false, unconfigured: false,
-      flags: {
-        sells_products: true, provides_services: false, uses_inventory: true, uses_pos: true,
-        accepts_credit: true, has_suppliers: true, has_customers: true, has_employees: true,
-        runs_payroll: true, multi_location: true, needs_advanced_reporting: true,
-      },
     },
   },
   {
@@ -496,11 +456,6 @@ export const SCOPE_PRESETS: ScopePreset[] = [
       name: "Test Consultant", businessType: "Services", legalForm: "Sole Proprietor",
       sector: "Professional Services", employeeCount: 0, taxRegistrations: ["TIN"],
       doesImport: false, doesExport: false, unconfigured: false,
-      flags: {
-        sells_products: false, provides_services: true, uses_inventory: false, uses_pos: false,
-        accepts_credit: false, has_suppliers: false, has_customers: true, has_employees: false,
-        runs_payroll: false, multi_location: false, needs_advanced_reporting: false,
-      },
     },
   },
   {
@@ -511,11 +466,6 @@ export const SCOPE_PRESETS: ScopePreset[] = [
       name: "Test Restaurant", businessType: "Restaurant", legalForm: "Partnership",
       sector: "Food & Beverage", employeeCount: 6, taxRegistrations: ["TIN", "VAT"],
       doesImport: false, doesExport: false, unconfigured: false,
-      flags: {
-        sells_products: true, provides_services: true, uses_inventory: true, uses_pos: true,
-        accepts_credit: false, has_suppliers: true, has_customers: true, has_employees: true,
-        runs_payroll: true, multi_location: false, needs_advanced_reporting: false,
-      },
     },
   },
   {
@@ -526,11 +476,6 @@ export const SCOPE_PRESETS: ScopePreset[] = [
       name: "Test Starter Shop", businessType: "Retail", legalForm: "Sole Proprietor",
       sector: "General Trade", employeeCount: 3, taxRegistrations: ["TIN", "VAT", "Withholding Tax"],
       doesImport: false, doesExport: false, unconfigured: false,
-      flags: {
-        sells_products: true, provides_services: false, uses_inventory: true, uses_pos: true,
-        accepts_credit: true, has_suppliers: true, has_customers: true, has_employees: true,
-        runs_payroll: true, multi_location: false, needs_advanced_reporting: true,
-      },
     },
   },
   {

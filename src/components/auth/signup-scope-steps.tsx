@@ -6,8 +6,7 @@
  */
 
 import {
-  OPERATIONAL_FLAG_LABELS, PLANS, resolveScope, MODULE_REGISTRY,
-  type BusinessCharacteristics, type OperationalFlags, type PlanKey,
+  type BusinessCharacteristics,
 } from "@/lib/business-scope";
 import { BUSINESS_TYPES, LEGAL_FORMS, SECTORS } from "@/components/compliance/compliance-provider";
 
@@ -152,73 +151,3 @@ export function BusinessProfileStep({
   );
 }
 
-export function OperationsStep({
-  value,
-  plan,
-  onChange,
-  onPlanChange,
-}: {
-  value: BusinessCharacteristics;
-  plan: PlanKey;
-  onChange: (patch: Partial<BusinessCharacteristics>) => void;
-  onPlanChange: (plan: PlanKey) => void;
-}) {
-  const flags = value.flags;
-  const scope = resolveScope({ ...value, unconfigured: false }, plan);
-  const included = MODULE_REGISTRY.filter((m) => scope.modules[m.key]?.allowed !== false);
-  const excluded = MODULE_REGISTRY.filter((m) => scope.modules[m.key]?.allowed === false);
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <span className={labelCls}>How does the business operate?</span>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {(Object.keys(OPERATIONAL_FLAG_LABELS) as (keyof OperationalFlags)[]).map((key) => (
-            <label
-              key={key}
-              className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/85"
-            >
-              <input
-                type="checkbox"
-                className="h-4 w-4 accent-amber-400"
-                checked={flags[key] ?? false}
-                onChange={(e) =>
-                  onChange({ flags: { ...flags, [key]: e.target.checked } })
-                }
-              />
-              <span>{OPERATIONAL_FLAG_LABELS[key]}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <span className={labelCls}>Plan</span>
-        <div className="flex flex-wrap gap-2">
-          {(Object.keys(PLANS) as PlanKey[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              className={chip(plan === key)}
-              onClick={() => onPlanChange(key)}
-            >
-              {PLANS[key].name}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/55">
-          Your workspace will include
-        </p>
-        <p className="mt-1.5 text-sm text-white/85">
-          {included.map((m) => m.name).join(" · ") || "Nothing yet — answer the questions above"}
-        </p>
-        {excluded.length > 0 && (
-          <p className="mt-2 text-xs text-white/45">Hidden for now: {excluded.map((m) => m.name).join(" · ")}</p>
-        )}
-      </div>
-    </div>
-  );
-}

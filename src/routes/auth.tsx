@@ -5,6 +5,9 @@ import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
 import { Loader2, X, LogIn, UserPlus } from "lucide-react";
 import desertSunsetBg from "@/assets/desert-sunset-bg.jpg";
+import { BusinessProfileStep } from "@/components/auth/signup-scope-steps";
+import { savePendingScope } from "@/lib/onboarding-scope";
+import { EMPTY_CHARACTERISTICS, type BusinessCharacteristics } from "@/lib/business-scope";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -98,6 +101,11 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [signupStep, setSignupStep] = useState(1);
+  const [characteristics, setCharacteristics] = useState<BusinessCharacteristics>({
+    ...EMPTY_CHARACTERISTICS,
+    flags: {},
+  });
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -112,9 +120,30 @@ function AuthPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === "signup" && signupStep < 2) {
+      if (signupStep === 1 && (!fullName.trim() || !email.trim() || password.length < 6)) {
+        toast.error("Enter your name, a valid email, and a password of at least 6 characters");
+        return;
+      }
+      if (
+        signupStep === 2 &&
+        (!characteristics.name.trim() ||
+          !characteristics.legalForm.trim() ||
+          !characteristics.businessType.trim() ||
+          !characteristics.sector.trim() ||
+          characteristics.employeeCount === null ||
+          characteristics.employeeCount < 0)
+      ) {
+        toast.error("Complete the required business profile fields");
+        return;
+      }
+      setSignupStep((step) => step + 1);
+      return;
+    }
     setBusy(true);
     try {
       if (mode === "signup") {
+        savePendingScope({ email, characteristics, plan: "full" });
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -126,6 +155,7 @@ function AuthPage() {
         if (error) throw error;
         toast.success("Account created. You can sign in now.");
         setMode("signin");
+        setSignupStep(1);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -150,53 +180,118 @@ function AuthPage() {
     <>
       <form onSubmit={submit} className="space-y-3">
         {mode === "signup" && (
-          <input
-            className={inputCls}
-            placeholder="Full name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+          <div className="mb-5 flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.16em] text-white/45">
+            {["Account", "Business Profile"].map((label, index) => (
+              <span key={label} className={signupStep === index + 1 ? "text-amber-300" : undefined}>
+                {index + 1}. {label}
+              </span>
+            ))}
+          </div>
+        )}
+        {mode === "signup" && signupStep === 1 && (
+          <>
+            <input
+              className={inputCls}
+              required
+              placeholder="Full name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+            />
+            <input
+              className={inputCls}
+              type="email"
+              required
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+              className={inputCls}
+              type="password"
+              required
+              minLength={6}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </>
+        )}
+        {mode === "signup" && signupStep === 2 && (
+          <BusinessProfileStep
+            value={characteristics}
+            onChange={(patch) => setCharacteristics((current) => ({ ...current, ...patch }))}
           />
         )}
-        <input
-          className={inputCls}
-          type="email"
-          required
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          className={inputCls}
-          type="password"
-          required
-          minLength={6}
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button
-          type="submit"
-          disabled={busy}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-amber-400 disabled:opacity-60"
-        >
-          {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-          {mode === "signin" ? "Sign in" : "Create account"}
-        </button>
+        {mode === "signin" && (
+          <>
+            <input
+              className={inputCls}
+              type="email"
+              required
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+              className={inputCls}
+              type="password"
+              required
+              minLength={6}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </>
+        )}
+        {mode === "signup" && (
+          <div className="flex gap-2 pt-2">
+            {signupStep > 1 && (
+              <button
+                type="button"
+                onClick={() => setSignupStep((step) => step - 1)}
+                className="flex-1 rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/10"
+              >
+                Back
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={busy}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-amber-400 disabled:opacity-60"
+            >
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+              {signupStep === 2 ? "Create account" : "Next"}
+            </button>
+          </div>
+        )}
+        {mode === "signin" && (
+          <button
+            type="submit"
+            disabled={busy}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-black transition hover:bg-amber-400 disabled:opacity-60"
+          >
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+            {mode === "signin" ? "Sign in" : "Create account"}
+          </button>
+        )}
       </form>
 
       <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-widest text-white/40">
         <span className="h-px flex-1 bg-white/15" />or<span className="h-px flex-1 bg-white/15" />
       </div>
 
-      <button
+      {mode === "signin" && <button
         onClick={google}
         className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold transition hover:bg-white/20"
       >
         Continue with Google
-      </button>
+      </button>}
 
       <button
-        onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+        onClick={() => {
+          setMode(mode === "signin" ? "signup" : "signin");
+          setSignupStep(1);
+        }}
         className="mt-5 w-full text-center text-xs text-white/60 transition hover:text-white"
       >
         {mode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}

@@ -19,6 +19,7 @@ import {
   type AccessVerdict, type BusinessCharacteristics, type BusinessScope, type Capability,
   type PlanKey,
 } from "@/lib/business-scope";
+import { clearPendingScope, readPendingScope } from "@/lib/onboarding-scope";
 
 /** business_settings keys owned by this layer. */
 const CHARACTERISTICS_KEY = "business.characteristics";
@@ -116,6 +117,7 @@ export function BusinessScopeProvider({ children }: { children: ReactNode }) {
     let stored: Partial<BusinessCharacteristics> = {};
     let storedPlan: PlanKey = "full";
     let configured = false;
+    let hasStoredPlan = false;
     try {
       const { data } = await client
         .from("business_settings")
@@ -128,7 +130,10 @@ export function BusinessScopeProvider({ children }: { children: ReactNode }) {
         }
         if (row.setting_key === PLAN_KEY) {
           const value = String(row.setting_value ?? "").trim() as PlanKey;
-          if (PLANS[value]) storedPlan = value;
+          if (PLANS[value]) {
+            storedPlan = value;
+            hasStoredPlan = true;
+          }
         }
       }
     } catch {
@@ -143,10 +148,49 @@ export function BusinessScopeProvider({ children }: { children: ReactNode }) {
       ...derived,
       ...stored,
       name: stored.name || derived.name || name,
-      flags: { ...(derived.flags ?? {}), ...(stored.flags ?? {}) },
       // Legacy safety: a business with no configuration at all keeps everything.
       unconfigured: !(configured || hasProfileSignal(derived)),
     };
+
+    // A confirmed signup may not have had a session when it saved its scope.
+    // Consume it on the first authenticated load without replacing configured data.
+    const pending = !configured ? readPendingScope() : null;
+    if (pending) {
+      try {
+        const { error: characteristicsError } = await client.from("business_settings").upsert(
+          {
+            setting_key: CHARACTERISTICS_KEY,
+            setting_value: JSON.stringify(pending.characteristics),
+            description: "Business characteristics used by the capability/scope engine",
+          },
+          { onConflict: "setting_key" },
+        );
+        if (characteristicsError) throw new Error(characteristicsError.message);
+
+        if (!hasStoredPlan && PLANS[pending.plan]) {
+          const { error: planError } = await client.from("business_settings").upsert(
+            {
+              setting_key: PLAN_KEY,
+              setting_value: pending.plan,
+              description: "Subscription plan (entitlement layer)",
+            },
+            { onConflict: "setting_key" },
+          );
+          if (planError) throw new Error(planError.message);
+        }
+
+        merged.name = pending.characteristics.name || merged.name;
+        Object.assign(merged, pending.characteristics, { unconfigured: false });
+        if (!hasStoredPlan && PLANS[pending.plan]) storedPlan = pending.plan;
+        setCharacteristics(merged);
+        setPlan(storedPlan);
+        clearPendingScope();
+        setLoading(false);
+        return;
+      } catch {
+        // Keep the pending value for a later authenticated retry.
+      }
+    }
 
     setCharacteristics(merged);
     setPlan(storedPlan);
@@ -187,7 +231,6 @@ export function BusinessScopeProvider({ children }: { children: ReactNode }) {
       const next: BusinessCharacteristics = {
         ...characteristics,
         ...patch,
-        flags: { ...characteristics.flags, ...(patch.flags ?? {}) },
         unconfigured: false,
       };
       setCharacteristics(next);

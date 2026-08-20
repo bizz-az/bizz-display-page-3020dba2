@@ -9,12 +9,11 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Building2, ShieldCheck, FlaskConical } from "lucide-react";
+import { Building2, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBusinessScope } from "@/components/business-scope-provider";
 import {
-  MODULE_REGISTRY, OPERATIONAL_FLAG_LABELS, PLANS, SCOPE_PRESETS,
-  type OperationalFlags, type PlanKey,
+  MODULE_REGISTRY, SCOPE_PRESETS,
 } from "@/lib/business-scope";
 
 const CARD =
@@ -24,31 +23,9 @@ const HEADING =
 
 export function BusinessScopePanel() {
   const {
-    scope, saveCharacteristics, savePlan, presetKey, applyPreset, loading,
+    scope, presetKey, applyPreset,
   } = useBusinessScope();
-  const [saving, setSaving] = useState(false);
   const characteristics = scope.characteristics;
-
-  const toggleFlag = async (key: keyof OperationalFlags, value: boolean) => {
-    setSaving(true);
-    try {
-      await saveCharacteristics({ flags: { [key]: value } as Partial<OperationalFlags> });
-      toast.success("Business scope recalculated");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const changePlan = async (plan: PlanKey) => {
-    try {
-      await savePlan(plan);
-      toast.success(`Plan set to ${PLANS[plan].name}`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not save");
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -66,53 +43,6 @@ export function BusinessScopePanel() {
           profile in Compliance → Business Profile.
         </p>
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          {(Object.keys(OPERATIONAL_FLAG_LABELS) as (keyof OperationalFlags)[]).map((key) => {
-            const checked = characteristics.flags[key] ?? true;
-            return (
-              <label
-                key={key}
-                className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white/85"
-              >
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-amber-400"
-                  checked={checked}
-                  disabled={saving || loading}
-                  onChange={(event) => void toggleFlag(key, event.target.checked)}
-                />
-                <span>{OPERATIONAL_FLAG_LABELS[key]}</span>
-              </label>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className={CARD}>
-        <h3 className={HEADING}>
-          <ShieldCheck className="h-4 w-4" /> Subscription plan (entitlement)
-        </h3>
-        <p className="mt-1 text-xs text-white/50">
-          Entitlement is evaluated separately from business eligibility. A module is available
-          only when the business qualifies for it AND the plan includes it.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {(Object.keys(PLANS) as PlanKey[]).map((plan) => (
-            <Button
-              key={plan}
-              size="sm"
-              variant={scope.plan === plan ? "default" : "outline"}
-              className={
-                scope.plan === plan
-                  ? "h-8 bg-amber-400 text-black hover:bg-amber-300"
-                  : "h-8 border-white/20 bg-white/5 text-white hover:bg-white/15"
-              }
-              onClick={() => void changePlan(plan)}
-            >
-              {PLANS[plan].name}
-            </Button>
-          ))}
-        </div>
       </section>
 
       <section className={CARD}>

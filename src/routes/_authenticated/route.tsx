@@ -7,23 +7,34 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import desertSunsetBg from "@/assets/desert-sunset-bg.jpg";
 import { MobileNav } from "@/components/mobile-nav";
+import { BusinessScopeProvider, useBusinessScope } from "@/components/business-scope-provider";
+import { ScopeGuard } from "@/components/scope-guard";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  component: AuthedLayout,
+  component: AuthedRoot,
 });
 
 const MODULES = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/m/sales", label: "Sales", icon: ShoppingCart },
-  { to: "/m/crm", label: "Customers & CRM", icon: UserRound },
-  { to: "/m/inventory", label: "Inventory", icon: Package },
-  { to: "/m/finance", label: "Finance", icon: Wallet },
-  { to: "/m/compliance", label: "Compliance", icon: ShieldCheck },
-  { to: "/m/employees", label: "Employees", icon: Users },
-  { to: "/m/reports", label: "Reports", icon: BarChart3 },
-  { to: "/m/admin", label: "Administration", icon: Settings },
+  { key: "dashboard", to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "sales", to: "/m/sales", label: "Sales", icon: ShoppingCart },
+  { key: "crm", to: "/m/crm", label: "Customers & CRM", icon: UserRound },
+  { key: "inventory", to: "/m/inventory", label: "Inventory", icon: Package },
+  { key: "finance", to: "/m/finance", label: "Finance", icon: Wallet },
+  { key: "compliance", to: "/m/compliance", label: "Compliance", icon: ShieldCheck },
+  { key: "employees", to: "/m/employees", label: "Employees", icon: Users },
+  { key: "reports", to: "/m/reports", label: "Reports", icon: BarChart3 },
+  { key: "admin", to: "/m/admin", label: "Administration", icon: Settings },
 ] as const;
+
+/** The authenticated shell is wrapped so navigation, pages and routes share one scope. */
+function AuthedRoot() {
+  return (
+    <BusinessScopeProvider>
+      <AuthedLayout />
+    </BusinessScopeProvider>
+  );
+}
 
 const HEADINGS: { match: string; title: string; subtitle: string }[] = [
   { match: "/dashboard", title: "Dashboard", subtitle: "Simplify your business." },
@@ -51,6 +62,8 @@ function useHeading(pathname: string) {
 function AuthedLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const heading = useHeading(pathname);
+  const { moduleAllowed } = useBusinessScope();
+  const modules = MODULES.filter((item) => moduleAllowed(item.key));
 
 
   const { data: alerts } = useQuery({
@@ -99,7 +112,7 @@ function AuthedLayout() {
           />
         </div>
         <nav className="flex-1 space-y-2 px-3 py-4 pb-8">
-          {MODULES.map((item) => {
+          {modules.map((item) => {
             const active =
               pathname === item.to ||
               (item.to !== "/dashboard" && pathname.startsWith(item.to)) ||
@@ -155,7 +168,9 @@ function AuthedLayout() {
 
         <main className="flex-1 overflow-x-hidden px-3 pb-28 pt-6 sm:px-6 sm:pt-8 lg:pb-6">
           <div key={pathname} className="page-transition">
-            <Outlet />
+            <ScopeGuard>
+              <Outlet />
+            </ScopeGuard>
           </div>
         </main>
 
